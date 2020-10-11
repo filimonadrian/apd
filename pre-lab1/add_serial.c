@@ -1,10 +1,10 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
 
-#define MIN(a,b) (((a) < (b))?(a):(b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define NUM_THREADS sysconf(_SC_NPROCESSORS_CONF)
 #define NUM_ITERATIONS 100
 #define DIFF 100
@@ -13,7 +13,7 @@
     schelet pentru exercitiul 5
 */
 
-int* arr;
+int *arr;
 int array_size;
 
 typedef struct range {
@@ -21,14 +21,13 @@ typedef struct range {
     int end;
 } Range;
 
-
 void *add(void *arg) {
 
-    Range *r = (Range*)arg;
+    Range *r = (Range *)arg;
 
     int start = r->start;
     int end = r->end;
-    
+
     for (int i = start; i < end; i++) {
         arr[i] += DIFF;
     }
@@ -65,28 +64,36 @@ int main(int argc, char *argv[]) {
     // multi-thread addition
     int r;
 
-    for (int id = 0; id < NUM_THREADS; id++) {
-        Range *range;
-        range = malloc(sizeof(Range));
-        range->start = id * (double)array_size / NUM_THREADS;
-        range->end = MIN((id + 1) * (double)array_size / NUM_THREADS, array_size);
+    // allocate a vector of ranges and send them with every thread
+    Range *ranges[NUM_THREADS];
+    for (int i = 0; i < NUM_THREADS; i++) {
+        ranges[i] = malloc(sizeof(Range));
+        ranges[i]->start = i * (double)array_size / NUM_THREADS;
+        ranges[i]->end = MIN((i + 1) * (double)array_size / NUM_THREADS, array_size);
+    }
 
-        r = pthread_create(&threads[id], NULL, add, (void *)range);
-        // free(range);
+    for (int i = 0; i < NUM_THREADS; i++) {
+        printf("%d %d\n", ranges[i]->start, ranges[i]->end);
+    }
+
+    for (int id = 0; id < NUM_THREADS; id++) {
+        // Range *range;
+        // range = malloc(sizeof(Range));
+        // range->start = id * (double)array_size / NUM_THREADS;
+        // range->end = MIN((id + 1) * (double)array_size / NUM_THREADS, array_size);
+
+        r = pthread_create(&threads[id], NULL, add, (void *)ranges[id]);
 
         if (r) {
             printf("Eroare la crearea thread-ului %d\n", id);
-            free(range);
             exit(-1);
         }
     }
 
     // TODO: aceasta operatie va fi paralelizata
-  	// for (int i = 0; i < array_size; i++) {
+    // for (int i = 0; i < array_size; i++) {
     //     arr[i] += 100;
     // }
-
-
 
     for (int i = 0; i < array_size; i++) {
         printf("%d", arr[i]);
@@ -97,5 +104,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-  	pthread_exit(NULL);
+    free(arr);
+    for (int i = 0; i < NUM_THREADS; i++) {
+        // free(ranges[i]);
+    }
+
+    pthread_exit(NULL);
 }
