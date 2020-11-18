@@ -14,12 +14,14 @@ public class Main {
         boolean sw = true;
 
         for (int i = 0; i < N_ITERATIONS; i++) {
+            Semaphore sem = new Semaphore(-2);
             List<Integer> list = new ArrayList<>();
+            List<Integer> synlist = Collections.synchronizedList(list);
 
-            threads[0] = new Reader("elemente1.txt", list);
-            threads[1] = new Reader("elemente2.txt", list);
-            threads[2] = new Reader("elemente3.txt", list);
-            threads[3] = new Sort(list);
+            threads[0] = new Reader("elemente1.txt", synlist, sem);
+            threads[1] = new Reader("elemente2.txt", synlist, sem);
+            threads[2] = new Reader("elemente3.txt", synlist, sem);
+            threads[3] = new Sort(list, sem);
 
             for (int j = 0; j < NUMBER_OF_THREADS; j++) {
                 threads[j].start();
