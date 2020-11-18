@@ -2,12 +2,15 @@ package parallelTree;
 
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Semaphore;
 
 public class VerifyTree implements Runnable {
 	TreeNode tree;
+	Semaphore sem;
 
-	public VerifyTree(TreeNode tree) {
+	public VerifyTree(TreeNode tree, Semaphore sem) {
 		this.tree = tree;
+		this.sem = sem;
 	}
 
 	public boolean isCorrect(TreeNode tree) {
@@ -33,10 +36,15 @@ public class VerifyTree implements Runnable {
 
 	@Override
 	public void run() {
+		try {
+			sem.acquire();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		if (isCorrect(tree))
 			System.out.println("Correct");
 		else
 			System.out.println("Wrong");
-
+		sem.release();
 	}
 }

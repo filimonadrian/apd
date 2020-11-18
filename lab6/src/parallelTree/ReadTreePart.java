@@ -5,14 +5,16 @@ import java.io.FileNotFoundException;
 import java.util.Scanner;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Semaphore;
 
 public class ReadTreePart implements Runnable {
 	TreeNode tree;
 	String fileName;
-
-	public ReadTreePart(TreeNode tree, String fileName) {
+	Semaphore sem;
+	public ReadTreePart(TreeNode tree, String fileName, Semaphore sem) {
 		this.tree = tree;
 		this.fileName = fileName;
+		this.sem = sem;
 	}
 
 	@Override
@@ -29,11 +31,13 @@ public class ReadTreePart implements Runnable {
 				while (treeNode == null) {
 					treeNode = tree.getNode(root);
 				}
-
-				treeNode.addChild(new TreeNode(child));
+				synchronized (tree) {
+					treeNode.addChild(new TreeNode(child));
+				}
 			}
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
+		sem.release();
 	}
 }
