@@ -58,8 +58,7 @@ int cmp(const void *a, const void *b) {
 	return A - B;
 }
 
-int is_power_of_two(int n)
-{
+int is_power_of_two(int n) {
 	if (n == 0) {
 		return 0;
 	}
