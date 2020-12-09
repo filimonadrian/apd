@@ -1,5 +1,11 @@
 package task2;
 
+
+import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class Main {
     static int N = 10;
     static int COLORS = 3;
@@ -48,7 +54,16 @@ public class Main {
     }
 
     public static void main(String[] args) {
+        AtomicInteger inQueue = new AtomicInteger(0);
+        ExecutorService tpe = Executors.newFixedThreadPool(4);
         int[] colors = new int[N];
-        colorGraph(colors, 0);
+        int step = 0;
+
+        /* serial running */
+//        colorGraph(colors, step);
+
+        /* parallel running */
+        inQueue.incrementAndGet();
+        tpe.submit(new MyRunnable(colors, 0, tpe, inQueue));
     }
 }
