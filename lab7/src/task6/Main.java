@@ -1,5 +1,7 @@
 package task6;
 
+import java.util.concurrent.ForkJoinPool;
+
 public class Main {
     public static int N = 4;
 
@@ -38,6 +40,14 @@ public class Main {
     }
     public static void main(String[] args) {
         int[] graph = new int[N];
-        queens(graph, 0);
+        int step = 0;
+        ForkJoinPool fjp = new ForkJoinPool(4);
+
+        /* serial running */
+//        queens(graph, step);
+
+        /* parallel running */
+        fjp.invoke(new MyTask(graph, step));
+        fjp.shutdown();
     }
 }
