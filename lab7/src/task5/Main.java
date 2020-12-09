@@ -1,5 +1,7 @@
 package task5;
 
+import java.util.concurrent.ForkJoinPool;
+
 public class Main {
     static int N = 10;
     static int COLORS = 3;
@@ -49,6 +51,14 @@ public class Main {
 
     public static void main(String[] args) {
         int[] colors = new int[N];
-        colorGraph(colors, 0);
+        int step = 0;
+        ForkJoinPool fjp = new ForkJoinPool(4);
+
+        /* serial running */
+//        colorGraph(colors, step);
+
+        /* parallel running */
+        fjp.invoke(new MyTask(colors, step));
+        fjp.shutdown();
     }
 }
