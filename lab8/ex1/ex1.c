@@ -41,7 +41,7 @@ int main (int argc, char *argv[])
         printf("Process %d: The number is %d\n", rank, random_num);
         
         // Sends the number to the first process.
-        ret = MPI_Send(&random_num, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+        ret = MPI_Send(&random_num, 1, MPI_INT, ROOT, 0, MPI_COMM_WORLD);
         if (ret != 0) {
           printf("Can't send data. I am process %d", rank);
         }
