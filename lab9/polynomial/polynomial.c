@@ -58,7 +58,7 @@ int main(int argc, char * argv[]) {
         ret = MPI_Send(&sum, 1, MPI_FLOAT, rank + 1, 0, MPI_COMM_WORLD);
         ret = MPI_Send(&x, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD);
         
-        printf("rank: %d coef: %f, sum: %f, x: %d\n", rank, sum, sum, x);
+        // printf("rank: %d coef: %f, sum: %f, x: %d\n", rank, sum, sum, x);
 		fclose(polFunctionFile);
 
 		// Se trimit valorile x si suma partiala (in acest caz valoarea coeficientului lui x^0)
@@ -81,7 +81,7 @@ int main(int argc, char * argv[]) {
         ret = MPI_Recv(&sum, 1, MPI_FLOAT, (rank - 1), 0, MPI_COMM_WORLD, &status);
         ret = MPI_Recv(&x, 1, MPI_INT, (rank - 1), 0, MPI_COMM_WORLD, &status);
 
-        printf("rank: %d coef: %f, sum: %f, x: %d\n", rank, c, sum, x);
+        // printf("rank: %d coef: %f, sum: %f, x: %d\n", rank, c, sum, x);
 
         val = c * pow(x, rank);
         sum += val;
