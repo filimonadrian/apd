@@ -13,13 +13,27 @@ int main (int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     int value;
+    int ret = 0;
+    MPI_Status status;
 
     if (rank == MASTER) {
         value = 7;
     }
+    
 
     for (int i = 1; i < procs; i *= 2) {
         // TODO
+        
+        if (rank < i && rank + i < procs) {
+            // printf("pas %d: %d ii trimite lui %d, sum=%d\n", i, rank, (rank - (i / 2)), sum);
+            ret = MPI_Send(&value, 1, MPI_INT, (rank + i), 0, MPI_COMM_WORLD);
+        }
+    
+        if (rank >= i && rank < i * 2) {
+            ret = MPI_Recv(&value, 1, MPI_INT, (rank - i), 0, MPI_COMM_WORLD, &status);
+            // printf("pas %d: %d primeste de la %d, sum=%d\n", i, rank, (rank + (i / 2)), sum);
+
+        }
     }
 
     printf("Process [%d] has value = %d\n", rank, value);
