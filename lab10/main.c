@@ -30,6 +30,7 @@ void read_neighbours(int rank) {
 int* get_dst(int rank, int numProcs, int leader) {
 	MPI_Status status;
 	MPI_Request request;
+    int ret = 0;
 
 	/* Vectori de parinti */
 	int *v = malloc(sizeof(int) * numProcs);
@@ -38,11 +39,12 @@ int* get_dst(int rank, int numProcs, int leader) {
 	memset(v, -1, sizeof(int) * numProcs);
 	memset(vRecv, -1, sizeof(int) * numProcs);
 	
-	if (rank == leader)
-		v[rank] = -1;
-	else {
+	if (rank == leader) {
+	    v[rank] = -1;
+
+	} else {
 		/* Daca procesul curent nu este liderul, inseamna ca va astepta un mesaj de la un parinte */
-		MPI_Recv(vRecv, numProcs, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
+		ret = MPI_Recv(vRecv, numProcs, MPI_INT, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
 		v[rank] = status.MPI_SOURCE;
 	}
 
@@ -51,22 +53,44 @@ int* get_dst(int rank, int numProcs, int leader) {
 	*  TODO2: Pentru fiecare proces vecin care nu este parintele procesului curent,
 	*		  voi trimite vectorul de parinti propriu. 
 	*/
-
+    for (int i = 0; i < num_neigh; i++) {
+		if (neigh[i] != v[rank]) {
+			ret = MPI_Send(v, numProcs, MPI_INT, neigh[i], 0, MPI_COMM_WORLD);
+		}
+	}
 	/*
 	*  TODO2: Vom astepta de la fiecare proces vecin care nu este parintele procesului curent 
 	*		  vectorul de parinti si actualizam vectorul propriu de parinti daca exista informatii aditionale
 	*/
-
+    for (int i = 0; i < num_neigh; i++) {
+		if (neigh[i] != v[rank]) {
+			ret = MPI_Recv(vRecv, numProcs, MPI_INT, neigh[i], 0, MPI_COMM_WORLD, &status);
+			for (int k = 0; k < numProcs; k++) {
+				if (v[k] == -1) {
+					v[k] = vRecv[k];
+				}
+			}
+		}
+	}
 	/*
 	*  TODO2: Topologia fiind deja stabilita, orice proces ce nu este lider va propaga
 	* 		  vectorul de vecini parintelui lui si va astepta topologia completa de la acesta
 	*/
 
+	if (rank != leader) {
+		ret = MPI_Send(v, numProcs, MPI_INT, v[rank], 0, MPI_COMM_WORLD);
+		ret = MPI_Recv(vRecv, numProcs, MPI_INT, v[rank], 0, MPI_COMM_WORLD, &status);
+	}
 
 	/*
 	*  TODO2: Procesul curent va trimite doar copiilor lui topologia completa
 	*/
 
+	for (int i = 0; i < num_neigh; i++) {
+		if (v[neigh[i]] == rank) {
+			ret = MPI_Send(v, numProcs, MPI_INT, neigh[i], 0, MPI_COMM_WORLD);
+		}
+	}
 	for (int i = 0; i < numProcs && rank == leader; i++) {
 		printf("The node %d has the parent %d\n", i, v[i]);
 	}
@@ -78,6 +102,8 @@ int leader_chosing(int rank, int nProcesses) {
 	int leader = -1;
 	int q;
 	leader = rank;
+    int leader_vec = -1;
+    MPI_Status status;
 	
 	/* Executam acest pas pana ajungem la convergenta */
 	for (int k = 0; k < CONVERGENCE_COEF; k++) {
@@ -85,6 +111,21 @@ int leader_chosing(int rank, int nProcesses) {
 		* 		 si voi astepta un mesaj de la orice vecin
 		* 		 Daca liderul e mai mare decat al meu, il actualizez pe al meu
 		*/
+
+        for (int i = 0; i < num_neigh; i++) {
+            int ret = MPI_Send(&leader, 1, MPI_INT, neigh[i], 0, MPI_COMM_WORLD);
+            if (ret != 0) {
+                printf("Can't send data. I am process %d", rank);
+            }
+            ret = MPI_Recv(&leader_vec, 1, MPI_INT, neigh[i], 0, MPI_COMM_WORLD, &status);
+            if (ret != 0) {
+                printf("Can't send data. I am process %d", rank);
+            }
+
+            if (leader_vec > leader) {
+                leader = leader_vec;
+            }
+        }
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -96,13 +137,15 @@ int leader_chosing(int rank, int nProcesses) {
 int get_number_of_nodes(int rank, int leader) {
 	
 	double val;
+	double recvd = 0;
+    MPI_Status status;
+
 	if (leader == rank) {
 		val = 1.0;
 	} else {
 		val = 0.0;
 	}
 
-	double recvd = 0;
 	/* Executam acest pas pana ajungem la convergenta */
 	for (int k = 0; k < CONVERGENCE_COEF; k++) {
 		/* TODO3: Pentru fiecare vecin, vom trimite valoarea pe care o cunosc
@@ -110,11 +153,23 @@ int get_number_of_nodes(int rank, int leader) {
 		* 		 Cu valoarea primita, actualizam valoarea cunoscuta ca fiind
 		* 		 media dintre cele 2
 		*/
+        for (int i = 0; i < num_neigh; i++) {
+            int ret = MPI_Send(&val, 1, MPI_DOUBLE, neigh[i], 0, MPI_COMM_WORLD);
+            if (ret != 0) {
+                printf("Can't send data. I am process %d", rank);
+            }
+            ret = MPI_Recv(&recvd, 1, MPI_DOUBLE, neigh[i], 0, MPI_COMM_WORLD, &status);
+            if (ret != 0) {
+                printf("Can't send data. I am process %d", rank);
+            }
+
+            val = (val + recvd) / 2;
+        }
 	}
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 	
-	return (int)(1 / val);
+	return round(1 / val);
 }
 
 int ** get_topology(int rank, int nProcesses, int * parents, int leader) {
