@@ -1,0 +1,21 @@
+334CC Potlog Andra-Isabela
+
+Dimensiunea vectorului partial primit de fiecare proces va fi N/numar_procese.
+
+Procesul master va genera random vectorul si va trimite fiecarui proces, 
+inclusiv lui insusi, vectorul partial. 
+
+Fiecare proces primeste acest vector partial si calculeaza minimul si maximul
+local, pe care le trimite catre master(mai putin procesul master, care isi are
+deja valorile calculate).
+
+Procesul master primeste minimurile si maximurile de la fiecare proces, le
+compara cu valorile pastrate de el si le actualizeaza daca primeste ceva mai
+mic/mai mare.
+
+La final, afiseaza minimul si maximul vectorului.
+
+Pentru N = 100 si numar_procese = 2, dureaza 0,334s.
+Pentru N = 100 si numar_procese = 25, dureaza 0,444s.
+Pentru N = 100 si numar_procese = 50, dureaza 0,630s.
+

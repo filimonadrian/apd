@@ -1,0 +1,16 @@
+README
+
+Daca trimit intervalul citit, am o aproximare a lui pi de 3,22. Am  trimis cu 
+long, size-ul ar trebui sa fie bun. DAca il las asa, hardcoded, aproximarea pare
+buna.
+
+
+UPDATE: Problema era de la faptul ca eu faceam un send de la master, cu intervalul, 
+inclusiv lui, iar apoi faceam un receive. Practic, pentru master,
+points[0] era valoarea intervalului, nu era valoarea lui circlePoints(ceea 
+ce a calculat el). Dupa ce am facut aceasta atribuire, am observat ca valorile au
+revenit la normal
+
+Rulare:
+make run
+Se introduce numarul dorit. Eu am testat cu 1000000(numar din 7 cifre)
