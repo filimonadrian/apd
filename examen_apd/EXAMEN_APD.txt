@@ -1,0 +1,266 @@
+EXAMEN APD
+
+P - scade 1 la semafor
+V - aduna 1 la semafor
+Producer-Consumer
+
+- Initializez bufferul (lungime k)
+- buf[k]
+
+- prim - este contorul pentru a vedea care este prima valoare de unde eu pot sa consum
+- ultim - contorul pentru a vedea care este ultima valoare pusa in buffer
+
+- semaphore gol si plin:
+- gol + plin trebuie sa dea mereu K -- fiecare trebuie sa fie pe cate o pozitie diferita
+- gol este pentru producator -- if (gol == k) NU AM VOIE SA PRODUC 
+- plin este pentru
+
+semaphore gol = k, plin = 0;
+- semafoare binare: mutexP si mutexC
+- sunt facute pentru a ma asigura ca mereu in zona critica de pus/scos din buffer este un singur
+    producer/consumer(nu vreau sa suprascriu valorile)
+
+process consumer[1..M] {
+
+    // declar valoarea produsa
+    typeT v;
+
+    while (true) {
+        // verific daca pot sa mai produc(daca gol este 0 => nu am loc in buffer)
+        P(gol);
+        // produc CEVA
+        v = produce();
+        
+        // urmeaza ZONA CRITICA, in care eu produc si modific valoarea lui ultim
+            P(mutexP)
+            buf[ultim] = v;
+            // consider bufferul cicular, adica daca se termina pozitiile, merg de la 1
+            ultim = ultim % k + 1
+            V(mutexP)
+        // anunt consumatorii ca am produs ceva, deci ei pot consuma -- plin o sa fie mai mare decat 0
+        V(plin)
+    }
+}
+
+process producer[1..N] {
+    // declar valoarea cosumata
+    typeT w;
+
+    while (true) {
+        // verific daca am ce sa consum -- daca plin == 0, nu am ce sa consum
+        P(plin);
+        // produc CEVA
+        v = produce();
+        
+        // urmeaza ZONA CRITICA, in care eu consum si modific valoarea de unde pot incepe sa consum
+            P(mutexC)
+            w = buf[prim];
+            // consider bufferul cicular, adica daca se termina pozitiile, merg de la 1
+            prim = prim % k + 1
+            V(mutexC)
+        // anunt producatorii ca am consumat una din valorile puse de ei
+        V(gol)
+        consume(w);
+    }
+}
+
+
+
+Problema cititori-scriitori
+
+PROBLEMA CLASICA, CU FAIRNESS
+
+int nr_readers = 0;
+// maxim un reader are voie sa intre in zona sa critica
+semaphore mutexR = 1;
+// poate fi un reader sau un writer la citit/scris
+semaphore rw = 1;
+
+process Cititor(i = 1 to M) {
+    while (true) {
+        // un singur reader poate intra aici
+        P(mutexR);
+            nr_readers++;
+            // daca e primul reader, el trebuie sa blocheze accesul pentru write
+            if (nr == 1) {
+                // blocheaza accesul pentru write
+                P(rw);
+            }
+        V(mutexR);
+
+        citeste_din_resursa_Comuna();
+
+        // fiecare reader trebuie sa decrementeze nr_readers atunci cand iese
+        P(mutexR);
+            nr_Readers--;
+            // daca este primul reader ==> eu trebuie sa deblochez accesul pentru ceilalti writeri
+            if (nr_readers == 1) {
+                V(rw);
+            }
+        V(mutexR);    
+    }
+}
+
+process Scriitor(i = 1 to N) {
+    while(true) {
+        P(rw);
+        scrie_in_Resursa_comuna();
+        V(rw);
+    }
+}
+
+PROBLEMA CU SINCRONIZARE CONDITIONALA
+
+3 semafoare: toate formeaza un singur semafor(splitted semaphore) 
+- e: pentru excludere mutuala
+- r: ptr. procesul de tip reader
+- w: ptr procesul de tip writer
+
+dr - coada de asteptare pentru readeri
+dw - coada de asteptare pentru writeri
+int nr, nw;
+
+process Cititor {
+    while (true) {
+        // nimeni nu mai intra aici
+        P(e);
+        // daca este vreun writer in coada de asteptare
+        if (nw > 0 or dw > 0) {
+            // ma pun in asteptare
+            dr = dr + 1;
+            // dau stafeta urmatorului proces
+            V(e);
+            // stau in asteptare. ma blochez
+            P(r);
+        }
+
+        // altfel, daca am continuat executia
+        // nu exista niciun writer care asteapta sa scrie/scrie acum
+        // un reader incepe sa citeasca
+        nr = nr + 1;
+
+        // daca mai exista si alt reader care asteapta blocat sa citeasca
+        if (dr > 0) {
+            // il trezesc
+            dr = dr - 1;
+            V(r);
+        // altfel daca sunt ultimul reader
+        } else if (dr == 0) {
+            // ridic conditia sa poata fi executata si de ceilalti
+            V(e);
+        }
+
+        CITESTE DIN RESURSA COMUNA
+
+        P(e);
+        // semnalizez ca un reader iese din zona de citire
+        nr = nr - 1;
+        // daca sunt ultimul reader care citeste si mai sunt writeri in asteptare
+        if (nr == 1 and dw > 0) {
+            // pasez stafeta unui writer
+            dw = dw - 1;
+            v(w);
+        // daca mai sunt alti readeri in coada sau nu este niciun writer in asteptare
+        } else if (nr > 0 or dw == 0) {
+            // permit urmatorului proces sa intre in executie
+            V(e);
+        }
+    }
+}
+
+process Scriitor[j = 1 to n] {
+    while(true) {
+        // nimeni nu mai intra aici
+        // !! pasez stafeta
+        P(e);
+        // daca e vreun reader sau vreun writer --> ma pun in coada
+        if (nr > 0 or nw > 0) {
+            // semnalizez ca un writer e in coada de asteptare
+            dw = dw + 1;
+            // pasez stafeta urmatorului proces care ar putea sa verifice conditia
+            V(e);
+            // Ma pun in coada de asteptare
+            P(w);
+        }
+        // daca am reusit sa intru aici
+        // cresc numarul de writeri
+        nw = nw + 1;
+        // blochez excluderea mutuala
+
+        V(e);
+        SCRIE IN RESURSA COMUNA
+
+        P(e);
+        
+        // ajung la numarul initial de writeri(am terminat de verificat conditile)
+        nw = nw - 1;
+
+        // daca coada de asteptare de la readeri > 0 si nu este coada la writeri
+        if (dr > 0 and dw == 0) {
+            // scoate un reader din coada
+            dr = dr - 1;
+            V(r);
+        // altfel daca sunt writeri in coada
+        } else if (dw > 0) {
+            dw = dw - 1;
+            V(w);
+        } else if (dr == 0 and dw == 0) {
+            V(e);
+        }
+    }
+}
+
+PROBLEMA BARBIERULUI:
+
+int nr_scanune_libere = n;
+semaphore clienti = 0;
+semaphore barbier_Gata = 0;
+semaphore scaune = 1;
+
+process Barbier {
+    while (true) {
+        // incearca sa preia un client
+        P(clienti);
+        
+        // daca ajung aici inseamna ca am luat un client 
+        // folosesc acest mutex(scaune)
+        P(scaune);
+            Nr_Scaune_libere ++;
+            V(barbierGata);
+        v(Scaune);
+
+    }
+}
+
+
+process CLient[i = 1 to m] {
+    while (true) {
+        P(scaune)
+        // procesul client cauta daca are loc pe scaun
+        if (Nr_Scaune_libere > 0) {
+            nr_scaune_libere--;
+
+            V(clienti);
+
+            V(scaune);
+
+            // toti clientii asteapta barbierul sa termine ca sa fie preluati
+            P(barbier_Gata);
+
+            // clientul e tuns
+        
+        // altfel daca nu am niciun loc liber => clientul pleaca netuns
+        } else {
+            v(scaune);
+            //clientul pleaca netuns
+        }
+    }
+}
+
+Cursuri care trebuie descarcate:
+09.12.2020 -- ceasuri logice
+11.12.2020 -- algoritmi de tip unda
+16.12.2020 -- alegerea unui lider
+13.01.2021 -- stabilirea topologiei
+20.01.2021 -- terminarea programelor distribuite
+
